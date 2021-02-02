@@ -59,7 +59,8 @@ func main() {
 ## Milestones
 - [x] Value.Float()
 - [x] Ctl.Reset()
-- [ ] Ctl.Subscribe()
+- [x] Ctl.Subscribe()
+- [ ] Ctl.StopSubscribe()
 - [ ] Persistence
 - [ ] Value Encryption
 - [ ] REST API Handler helper for management

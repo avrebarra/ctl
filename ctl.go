@@ -11,9 +11,10 @@ type Config struct {
 }
 
 type Ctl struct {
-	config Config
-	valsrc []byte
-	valmap map[string]string
+	config         Config
+	valsrc         []byte
+	valmap         map[string]string
+	subscribersmap map[string][]func(v Value)
 }
 
 func New(cfg Config) (*Ctl, error) {
@@ -22,9 +23,10 @@ func New(cfg Config) (*Ctl, error) {
 	// }
 
 	ent := &Ctl{
-		config: cfg,
-		valsrc: []byte{},
-		valmap: map[string]string{},
+		config:         cfg,
+		valsrc:         []byte{},
+		valmap:         map[string]string{},
+		subscribersmap: map[string][]func(v Value){},
 	}
 
 	ent.Reset()
@@ -66,10 +68,14 @@ func (e *Ctl) Set(key string, value interface{}) (val Value) {
 		return
 	}
 
+	// trigger subscribers
+	e.triggerSubscribers(key, e.Get(key))
+
 	return
 }
 
 func (e *Ctl) Subscribe(key string, fun func(v Value)) (subid string) {
+	e.subscribersmap[key] = append(e.subscribersmap[key], fun)
 	return
 }
 
@@ -77,6 +83,10 @@ func (e *Ctl) Reset() {
 	if e.config.InitialValues != nil {
 		e.valmap = e.config.InitialValues
 		_ = e.rebuildmap() // intendedly thrown
+
+		for k := range e.valmap {
+			e.triggerSubscribers(k, e.Get(k))
+		}
 	}
 }
 
@@ -87,5 +97,18 @@ func (e *Ctl) rebuildmap() (err error) {
 	}
 
 	e.valsrc = newvalsrc
+	return
+}
+
+func (e *Ctl) triggerSubscribers(key string, val Value) (err error) {
+	subfuns, ok := e.subscribersmap[key]
+	if !ok {
+		return
+	}
+
+	for _, subfun := range subfuns {
+		subfun(val)
+	}
+
 	return
 }
