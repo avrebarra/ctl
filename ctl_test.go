@@ -25,19 +25,6 @@ func TestNew(t *testing.T) {
 			wantNil: false,
 			wantErr: false,
 		},
-		{
-			name: "ok/with_initial_values",
-			args: args{
-				cfg: ctl.Config{
-					InitialValues: map[string]string{
-						"i1": "data",
-						"i2": `{"foal":false}`,
-					},
-				},
-			},
-			wantNil: false,
-			wantErr: false,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -56,10 +43,10 @@ func TestNew(t *testing.T) {
 }
 
 func TestCtl_Get(t *testing.T) {
-	e, err := ctl.New(ctl.Config{InitialValues: map[string]string{
-		"i1": "ok",
-	}})
+	xctl, err := ctl.New(ctl.Config{})
 	assert.Nil(t, err)
+
+	xctl.Set("i1", true)
 
 	type args struct {
 		key string
@@ -85,7 +72,7 @@ func TestCtl_Get(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotVal := e.Get(tt.args.key)
+			gotVal := xctl.Get(tt.args.key)
 			if tt.wantVal {
 				assert.NotNil(t, gotVal)
 			} else {

@@ -8,7 +8,6 @@ import (
 )
 
 type Config struct {
-	InitialValues   map[string]string
 	Store           Store
 	PersistenceRate time.Duration
 }
@@ -37,9 +36,6 @@ func New(cfg Config) (*Ctl, error) {
 
 	if err := ent.refreshFromStore(); err != nil {
 		return nil, err
-	}
-	if ent.config.Store == nil {
-		ent.Reset()
 	}
 
 	return ent, nil
@@ -99,21 +95,6 @@ func (e *Ctl) Set(key string, value interface{}) (val Value) {
 func (e *Ctl) Subscribe(key string, fun func(v Value)) (subid string) {
 	e.subscribersmap[key] = append(e.subscribersmap[key], fun)
 	return
-}
-
-func (e *Ctl) Reset() {
-	if e.config.InitialValues != nil {
-		e.valmap = e.config.InitialValues
-		_ = e.rebuildmap() // intendedly thrown
-
-		for k := range e.valmap {
-			e.triggerSubscribers(k, e.Get(k))
-		}
-	}
-
-	if e.config.Store != nil {
-		e.persistToStore()
-	}
 }
 
 // ***
