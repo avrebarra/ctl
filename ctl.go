@@ -27,10 +27,7 @@ func New(cfg Config) (*Ctl, error) {
 		valmap: map[string]string{},
 	}
 
-	if cfg.InitialValues != nil {
-		ent.valmap = cfg.InitialValues
-		_ = ent.rebuildmap() // intendedly thrown
-	}
+	ent.Reset()
 
 	return ent, nil
 }
@@ -74,6 +71,13 @@ func (e *Ctl) Set(key string, value interface{}) (val Value) {
 
 func (e *Ctl) Subscribe(key string, fun func(v Value)) (subid string) {
 	return
+}
+
+func (e *Ctl) Reset() {
+	if e.config.InitialValues != nil {
+		e.valmap = e.config.InitialValues
+		_ = e.rebuildmap() // intendedly thrown
+	}
 }
 
 func (e *Ctl) rebuildmap() (err error) {

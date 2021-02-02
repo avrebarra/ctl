@@ -58,7 +58,7 @@ func main() {
 
 ## Milestones
 - [x] Value.Float()
-- [ ] Ctl.Reset()
+- [x] Ctl.Reset()
 - [ ] Ctl.Subscribe()
 - [ ] Persistence
 - [ ] Value Encryption
