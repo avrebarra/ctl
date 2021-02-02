@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"time"
 )
 
 type Config struct {
-	InitialValues map[string]string
+	InitialValues   map[string]string
+	Store           Store
+	PersistenceRate time.Duration
 }
 
 type Ctl struct {
@@ -15,6 +18,8 @@ type Ctl struct {
 	valsrc         []byte
 	valmap         map[string]string
 	subscribersmap map[string][]func(v Value)
+
+	nextpersist time.Time
 }
 
 func New(cfg Config) (*Ctl, error) {
@@ -27,9 +32,15 @@ func New(cfg Config) (*Ctl, error) {
 		valsrc:         []byte{},
 		valmap:         map[string]string{},
 		subscribersmap: map[string][]func(v Value){},
+		nextpersist:    time.Now().Add(cfg.PersistenceRate),
 	}
 
-	ent.Reset()
+	if err := ent.refreshFromStore(); err != nil {
+		return nil, err
+	}
+	if ent.config.Store == nil {
+		ent.Reset()
+	}
 
 	return ent, nil
 }
@@ -55,11 +66,13 @@ func (e *Ctl) Set(key string, value interface{}) (val Value) {
 			val.err = err
 			return
 		}
-		e.valmap[key] = string(btvalue)
+		val = Value{valsrc: string(btvalue)}
 		break
 	default:
-		e.valmap[key] = fmt.Sprint(value)
+		val = Value{valsrc: fmt.Sprint(value)}
 	}
+
+	e.valmap[key] = val.valsrc
 
 	// rebuild map
 	err := e.rebuildmap()
@@ -70,6 +83,15 @@ func (e *Ctl) Set(key string, value interface{}) (val Value) {
 
 	// trigger subscribers
 	e.triggerSubscribers(key, e.Get(key))
+
+	// persist if timely
+	if time.Now().After(e.nextpersist) {
+		err = e.persistToStore()
+		if err != nil {
+			val.err = err
+			return
+		}
+	}
 
 	return
 }
@@ -88,6 +110,43 @@ func (e *Ctl) Reset() {
 			e.triggerSubscribers(k, e.Get(k))
 		}
 	}
+
+	if e.config.Store != nil {
+		e.persistToStore()
+	}
+}
+
+// ***
+
+func (e *Ctl) refreshFromStore() (err error) {
+	if e.config.Store == nil {
+		return
+	}
+
+	// get stored value
+	var val string
+	val, err = e.config.Store.Get()
+	if err != nil {
+		return
+	}
+
+	// refresh valmap
+	e.valsrc = []byte(val)
+	err = json.Unmarshal(e.valsrc, &e.valmap)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (e *Ctl) persistToStore() (err error) {
+	if e.config.Store == nil {
+		return
+	}
+
+	e.nextpersist = time.Now().Add(e.config.PersistenceRate)
+	return e.config.Store.Set(string(e.valsrc))
 }
 
 func (e *Ctl) rebuildmap() (err error) {
