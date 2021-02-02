@@ -57,7 +57,7 @@ func main() {
 ```
 
 ## Milestones
-- [ ] Value.Float()
+- [x] Value.Float()
 - [ ] Ctl.Reset()
 - [ ] Ctl.Subscribe()
 - [ ] Persistence

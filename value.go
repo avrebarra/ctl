@@ -23,6 +23,15 @@ func (v Value) Bool() (val bool, err error) {
 	return strconv.ParseBool(v.valsrc)
 }
 
+func (v Value) Float() (val float64, err error) {
+	if v.err != nil {
+		err = v.err
+		return
+	}
+
+	return strconv.ParseFloat(v.valsrc, 64)
+}
+
 func (v Value) Int() (val int, err error) {
 	err = v.err
 	if err != nil {
