@@ -163,12 +163,12 @@ Available endpoints:
 - [ ] Value Encryption
 - [x] REST API Handler helper for management
 
-[godoc-image]: https://godoc.org/github.com/avrebarra/minimok?status.svg
-[godoc-url]: https://godoc.org/github.com/avrebarra/minimok
-[report-image]: https://goreportcard.com/badge/github.com/avrebarra/minimok
-[report-url]: https://goreportcard.com/report/github.com/avrebarra/minimok
-[tests-image]: https://cloud.drone.io/api/badges/avrebarra/minimok/status.svg
-[tests-url]: https://cloud.drone.io/avrebarra/minimok
-[coverage-image]: https://codecov.io/gh/avrebarra/minimok/graph/badge.svg
-[coverage-url]: https://codecov.io/gh/avrebarra/minimok
+[godoc-image]: https://godoc.org/github.com/avrebarra/ctl?status.svg
+[godoc-url]: https://godoc.org/github.com/avrebarra/ctl
+[report-image]: https://goreportcard.com/badge/github.com/avrebarra/ctl
+[report-url]: https://goreportcard.com/report/github.com/avrebarra/ctl
+[tests-image]: https://cloud.drone.io/api/badges/avrebarra/ctl/status.svg
+[tests-url]: https://cloud.drone.io/avrebarra/ctl
+[coverage-image]: https://codecov.io/gh/avrebarra/ctl/graph/badge.svg
+[coverage-url]: https://codecov.io/gh/avrebarra/ctl
 [sponsor-image]: https://img.shields.io/badge/github-donate-green.svg
