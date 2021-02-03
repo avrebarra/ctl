@@ -13,12 +13,27 @@
 
 ## Usage
 ### Quick Glance
-Add these:
+By adding these:
 ```go
-http.DefaultServeMux.Handle("/ctl/", ctl.MakeHandler(ctl.ConfigHandler{ PathPrefix: "/ctl/", Ctl: ctl.GetGlobal() }))
-fmt.Println("listening http://localhost:3333...")
+package main
+
+import (
+	"fmt"
+
+	"github.com/avrebarra/ctl"
+)
+
+func main() {
+	http.DefaultServeMux.Handle("/ctl/", ctl.MakeHandler(ctl.ConfigHandler{ 
+		PathPrefix: "/ctl/", 
+		Ctl: ctl.GetGlobal(),
+	}))
+	
+	fmt.Println("listening http://localhost:3333...")
+	http.ListenAndServe(":3333",http.DefaultServeMux)
+}
 ```
-To do these:
+You will have a runtime configurables and HTTP control panel:
 ```sh
 $ curl --location --request GET 'localhost:3333/ctl/config'
 {"flags.logging_enabled":"true","settings.logging_defaults":"{\"Version\":\"1.0\",\"ClusterID\":\"88888\"}","settings.logging_min_amount":"100000","settings.logging_prefix":"trx_log"}
@@ -32,7 +47,7 @@ $ curl --location --request PATCH 'localhost:3333/ctl/config/flags.transaction_l
 
 ```
 
-### Setup and managing values
+### Managing values via code
 *Note: It's recommended to specify a centralized storage. By doing so, multiple instances of same service could make use of shared/synchronized dynamic configs. You can also define your own store for db/redis/consul etc by implementing `Store` interface*
 
 ```go
@@ -71,13 +86,6 @@ func main() {
 	// binding value to object
 	datafield := DataField{}
 	_ = cpx.Get("settings.logging_defaults").Bind(&datafield)
-
-
-	// register as global for centralized access on runtime
-	ctl.RegisterGlobal(cpx)
-	flagEnableBanner, _ = ctl.GetGlobal().Get("flags.enable_banner").Bool()
-
-	fmt.Println("values:", flagEnableBanner, confMinAmt, datafield)
 }
 ```
 
@@ -94,15 +102,9 @@ import (
 )
 
 func main() {
-	store, _ := ctl.NewStoreFile(ctl.ConfigStoreFile{FilePath: "fixture/store.json"})
-	cpx, _ := ctl.New(ctl.Config{
-		Store:       store,
-		RefreshRate: 10 * time.Second,
-	})
-
 	http.DefaultServeMux.Handle("/ctl/", ctl.MakeHandler(ctl.ConfigHandler{
 		PathPrefix: "/ctl/",
-		Ctl:        cpx,
+		Ctl:        ctl.GetGlobal(),
 	}))
 
 	fmt.Println("listening http://localhost:3333...")
@@ -117,7 +119,33 @@ Available endpoints:
 - GET http://localhost:3333/{prefix}/config/flags.enable_debug
 - PUT http://localhost:3333/{prefix}/config/flags.enable_debug with payload `{ "value":"value to persist in string" }`
 
-### Register Global Instance
+### Referencing and Refreshing Values
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/avrebarra/ctl"
+)
+
+func main() {
+	ref := ctl.GetGlobal().Get("flags.isok") // initial value: none
+	fmt.Println(ref.Refresh().Bool())
+
+	ctl.GetGlobal().Set("flags.isok", "true") // change value
+	fmt.Println(ref.Refresh().Bool())
+
+	// Output:
+	// false value not found
+	// true <nil>
+}
+
+```
+
+### Replacing Global Singleton
+By default global instance will be generated with memstore, but you can override it using custom store and options.
+
 ```go
 package main
 
@@ -148,7 +176,7 @@ func main() {
 - [ ] Ctl.StopSubscribe()
 - [x] Persistence
 - [ ] Value Encryption
-- [ ] Pointer values
+- [x] Reference values
 - [x] REST API Handler helper for management
 
 [godoc-image]: https://godoc.org/github.com/avrebarra/ctl?status.svg
