@@ -1,6 +1,6 @@
 <div class="info" align="left">
   <h1 class="name">🎛️ ctl</h1>
-  Add a control board to golang app/server.
+  Quickly add dynamic configurations and control panel to your app & server.
   <br>
   <br>
 
@@ -12,9 +12,10 @@
 </div>
 
 ## Usage
-*PS: Check example_test.go for more up to date examples*
 
-### Basic Usage
+### Setup and managing values
+*Note: It's recommended to specify a centralized storage. By doing so, multiple instances of same service could make use of shared/synchronized dynamic configs. You can also define your own store for db/redis/consul etc by implementing `Store` interface*
+
 ```go
 package main
 
@@ -25,77 +26,40 @@ import (
 )
 
 func main() {
-	// setup instance
-	xctl, _ := ctl.New(ctl.Config{})
+	// setup instance with file storage
+	store, _ := ctl.NewStoreFile(ctl.ConfigStoreFile{FilePath: "fixture/store.json"})
+	cpx, _ := ctl.New(ctl.Config{
+		Store:       store,
+		RefreshRate: 10 * time.Second, // how often to refetch data from store
+	})
 
-	// read configuration
-	fmt.Println(xctl.Get("flags.enable_banner").Bool())
-	fmt.Println(xctl.Get("setting.volume").Int())
-	fmt.Println(xctl.Get("setting.unknown").String())
-
-	// add configuration
-	xctl.Set("flags.enable_debug", true)
-
-	// register as global (optional)
-	ctl.RegisterGlobal(xctl)
-	fmt.Println(ctl.GetGlobal().Get("flags.enable_banner").Bool())
-}
-```
-
-### Complex Value (Struct / Map)
-```go
-package main
-
-import (
-	"fmt"
-
-	"github.com/avrebarra/ctl"
-)
-
-func main() {
-	type objstr struct {
-		Data1     string
-		Data2     bool
-		SubStruct struct {
-			Data1 string
-			Data2 bool
-		}
+	// setting configurations
+	cpx.Set("flags.transaction_logging_enabled", true) // no error handling
+	cpx.Set("flags.transaction_logging_prefix", "trx_log")
+	cpx.Set("flags.transaction_logging_defaults", DataField{Version: "1.0", ClusterID: "88888"})
+	if err := cpx.Set("settings.transaction_logging_minimum_amount", 100000).Err(); err != nil {
+		fmt.Println(err.Error())
+		return
 	}
 
-	// setup instance
-	xctl, _ := ctl.New(ctl.Config{})
+	// getting config and assert as multiple types (boolean, float, string, object)
+	datafield := DataField{}
+	_ = cpx.Get("flags.transaction_logging_defaults").Bind(&datafield)
+	flagEnableBanner, _ := cpx.Get("flags.enable_banner").Bool()
+	confMinAmt, _ := cpx.Get("settings.transaction_logging_minimum_amount").Int()
+	fmt.Println("values:", flagEnableBanner, confMinAmt, datafield)
 
-	// add configuration
-	xctl.Set("my_settings.complex_object", objstr{
-		Data1: "something",
-		Data2: true,
-		SubStruct: struct {
-			Data1 string
-			Data2 bool
-		}{
-			Data1: "awyeah",
-		},
-	})
-
-	// read configuration
-	got := objstr{}
-	err := xctl.Get("my_settings.complex_object").Bind(&got)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(got.Data1)
-	fmt.Println(got.Data2)
-	fmt.Println(got.SubStruct.Data1)
-
-	// Output:
-	// something
-	// true
-	// awyeah
+	// register as global for centralized access on runtime
+	ctl.RegisterGlobal(cpx)
+	flagEnableBanner, _ = ctl.GetGlobal().Get("flags.enable_banner").Bool()
+	fmt.Println("global values:", flagEnableBanner)
 }
 ```
 
-### Persistence
+
+### Setup HTTP based Control Panel
+Ctl also support attaching some endpoints to your HTTP server to enable value management via HTTP request:
+
 ```go
 package main
 
@@ -106,53 +70,30 @@ import (
 )
 
 func main() {
-	// setup store
-	fstore, _ := ctl.NewStoreFile(ctl.ConfigStoreFile{
-		FilePath: "fixture/store.json",
+	// setup instance with file storage
+	store, _ := ctl.NewStoreFile(ctl.ConfigStoreFile{FilePath: "fixture/store.json"})
+	cpx, _ := ctl.New(ctl.Config{
+		Store:       store,
+		RefreshRate: 10 * time.Second,
 	})
 
-	// setup instance
-	xctl, _ := ctl.New(ctl.Config{
-		Store: fstore,
-	})
-
-	fmt.Println(xctl.Get("flags.previously_persisted").Bool())
-	fmt.Println(xctl.Set("flags.another_example_flag", true).Bool())
-
-	// Output:
-	// true <nil>
-	// true <nil>
-}
-```
-
-### CTL Endpoint
-```go
-package main
-
-import (
-	"net/http"
-
-	"github.com/avrebarra/ctl"
-)
-
-func main() {
-	store, _ := ctl.NewStoreFile(ctl.ConfigStoreFile{FilePath: "./fixture/store.json"})
-	xctl, _ := ctl.New(ctl.Config{Store: store})
-
-	http.Handle("/ctl", ctl.MakeHandler(ConfigHandler{
-		PathPrefix: "/ctl",
-		Ctl:        xctl,
+	// attach control panel http routes to manage configs
+	http.DefaultServeMux.Handle("/ctl/", ctl.MakeHandler(ctl.ConfigHandler{
+		PathPrefix: "/ctl/",
+		Ctl:        cpx,
 	}))
 
+	fmt.Println("listening http://localhost:3333...")
+	fmt.Println("     to see ctl config listing, visit http://localhost:3333/ctl/config")
+	fmt.Println("     get and update individual config using GET/POST http://localhost:3333/ctl/config/{keys}")
 	http.ListenAndServe(":3333", http.DefaultServeMux)
 }
 ```
 
 Available endpoints:
-- `GET {prefix}/configs/`
-- `GET {prefix}/configs/flags.enable_debug`
-- `PUT {prefix}/configs/flags.enable_debug { value:"value" }`
-
+- GET http://localhost:3333/{prefix}/config
+- GET http://localhost:3333/{prefix}/config/flags.enable_debug
+- PUT http://localhost:3333/{prefix}/config/flags.enable_debug with payload `{ "value":"value to persist in string" }`
 
 ## Milestones
 - [x] Value.Float()
@@ -161,6 +102,7 @@ Available endpoints:
 - [ ] Ctl.StopSubscribe()
 - [x] Persistence
 - [ ] Value Encryption
+- [ ] Pointer values
 - [x] REST API Handler helper for management
 
 [godoc-image]: https://godoc.org/github.com/avrebarra/ctl?status.svg
