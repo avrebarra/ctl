@@ -12,6 +12,7 @@
 </div>
 
 ## Usage
+### Basic Usage
 ```go
 package main
 
@@ -56,18 +57,47 @@ func main() {
 }
 ```
 
+### Persistence
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/avrebarra/ctl"
+)
+
+func main() {
+    // setup store
+	fstore, _ := ctl.NewStoreFile(ctl.ConfigStoreFile{
+		FilePath: "fixture/store.json",
+	})
+
+	// setup instance
+	xctl, _ := ctl.New(ctl.Config{
+		Store: fstore,
+	})
+
+	fmt.Println(xctl.Get("flags.previously_persisted").Bool())
+	fmt.Println(xctl.Set("flags.another_example_flag", true).Bool())
+
+	// Output:
+	// true <nil>
+	// true <nil>
+}
+```
+
 ## Milestones
 - [x] Value.Float()
 - [x] Ctl.Reset()
 - [x] Ctl.Subscribe()
 - [ ] Ctl.StopSubscribe()
-- [ ] Persistence
+- [x] Persistence
 - [ ] Value Encryption
 - [ ] REST API Handler helper for management
 
 ```
 GET /
-POST /reset
 GET /items/
 GET /items/flags.enable_debug
 PUT /items/flags.enable_debug
