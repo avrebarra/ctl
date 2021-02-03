@@ -8,8 +8,8 @@ import (
 )
 
 type Config struct {
-	Store           Store
-	PersistenceRate time.Duration
+	Store       Store
+	RefreshRate time.Duration
 }
 
 type Ctl struct {
@@ -18,7 +18,7 @@ type Ctl struct {
 	valmap         map[string]string
 	subscribersmap map[string][]func(v Value)
 
-	nextpersist time.Time
+	nextrefresh time.Time
 }
 
 func New(cfg Config) (*Ctl, error) {
@@ -31,10 +31,10 @@ func New(cfg Config) (*Ctl, error) {
 		valsrc:         []byte{},
 		valmap:         map[string]string{},
 		subscribersmap: map[string][]func(v Value){},
-		nextpersist:    time.Now().Add(cfg.PersistenceRate),
+		nextrefresh:    time.Now().Add(cfg.RefreshRate),
 	}
 
-	if err := ent.refreshFromStore(); err != nil {
+	if err := ent.storerefresh(); err != nil {
 		return nil, err
 	}
 
@@ -42,10 +42,14 @@ func New(cfg Config) (*Ctl, error) {
 }
 
 func (e *Ctl) List() (lis map[string]string) {
+	e.storerefresh()
+
 	return e.valmap
 }
 
 func (e *Ctl) Get(key string) (val Value) {
+	e.storerefresh()
+
 	strval, ok := e.valmap[key]
 	if !ok {
 		val.err = fmt.Errorf("value not found")
@@ -84,13 +88,11 @@ func (e *Ctl) Set(key string, value interface{}) (val Value) {
 	// trigger subscribers
 	e.triggerSubscribers(key, e.Get(key))
 
-	// persist if timely
-	if time.Now().After(e.nextpersist) {
-		err = e.persistToStore()
-		if err != nil {
-			val.err = err
-			return
-		}
+	// persist
+	err = e.storepersist()
+	if err != nil {
+		val.err = err
+		return
 	}
 
 	return
@@ -103,8 +105,11 @@ func (e *Ctl) Subscribe(key string, fun func(v Value)) (subid string) {
 
 // ***
 
-func (e *Ctl) refreshFromStore() (err error) {
+func (e *Ctl) storerefresh() (err error) {
 	if e.config.Store == nil {
+		return
+	}
+	if time.Now().Before(e.nextrefresh) {
 		return
 	}
 
@@ -122,15 +127,16 @@ func (e *Ctl) refreshFromStore() (err error) {
 		return
 	}
 
+	e.nextrefresh = time.Now().Add(e.config.RefreshRate)
+
 	return
 }
 
-func (e *Ctl) persistToStore() (err error) {
+func (e *Ctl) storepersist() (err error) {
 	if e.config.Store == nil {
 		return
 	}
 
-	e.nextpersist = time.Now().Add(e.config.PersistenceRate)
 	return e.config.Store.Set(string(e.valsrc))
 }
 
