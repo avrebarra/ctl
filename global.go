@@ -7,5 +7,9 @@ func RegisterGlobal(c *Ctl) {
 }
 
 func GetGlobal() (c *Ctl) {
+	if globalinst == nil {
+		globalinst, _ = New(Config{Store: NewStoreMem(), RefreshRate: 0})
+	}
+
 	return globalinst
 }
