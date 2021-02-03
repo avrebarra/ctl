@@ -6,13 +6,21 @@ import (
 )
 
 type Value struct {
+	ctlref *Ctl
+	key    string
 	valsrc string
 	err    error
+}
+
+func (v Value) Refresh() Value {
+	return v.ctlref.Get(v.key)
 }
 
 func (v Value) Err() (err error) {
 	return v.err
 }
+
+// ***
 
 func (v Value) Bool() (val bool, err error) {
 	if v.err != nil {

@@ -26,6 +26,10 @@ func New(cfg Config) (*Ctl, error) {
 	// 	return nil, err
 	// }
 
+	if cfg.Store == nil {
+		cfg.Store = NewStoreMem()
+	}
+
 	ent := &Ctl{
 		config:         cfg,
 		valsrc:         []byte{},
@@ -50,19 +54,23 @@ func (e *Ctl) List() (lis map[string]string) {
 func (e *Ctl) Get(key string) (val Value) {
 	e.storerefresh()
 
+	val = Value{ctlref: e, key: key}
+
 	strval, ok := e.valmap[key]
 	if !ok {
 		val.err = fmt.Errorf("value not found")
 		return
 	}
 
-	val = Value{valsrc: strval}
+	val.valsrc = strval
 
 	return
 }
 
 func (e *Ctl) Set(key string, value interface{}) (val Value) {
 	e.storerefresh()
+
+	val = Value{ctlref: e, key: key}
 
 	// serialize value
 	switch reflect.ValueOf(value).Kind() {
@@ -72,10 +80,10 @@ func (e *Ctl) Set(key string, value interface{}) (val Value) {
 			val.err = err
 			return
 		}
-		val = Value{valsrc: string(btvalue)}
+		val.valsrc = string(btvalue)
 		break
 	default:
-		val = Value{valsrc: fmt.Sprint(value)}
+		val.valsrc = fmt.Sprint(value)
 	}
 
 	e.valmap[key] = val.valsrc
@@ -108,9 +116,6 @@ func (e *Ctl) Subscribe(key string, fun func(v Value)) (subid string) {
 // ***
 
 func (e *Ctl) storerefresh() (err error) {
-	if e.config.Store == nil {
-		return
-	}
 	if time.Now().Before(e.nextrefresh) {
 		return
 	}
@@ -120,6 +125,11 @@ func (e *Ctl) storerefresh() (err error) {
 	val, err = e.config.Store.Get()
 	if err != nil {
 		return
+	}
+
+	// default to empty object
+	if val == "" {
+		val = "{}"
 	}
 
 	// refresh valmap
