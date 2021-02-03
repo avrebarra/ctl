@@ -62,6 +62,8 @@ func (e *Ctl) Get(key string) (val Value) {
 }
 
 func (e *Ctl) Set(key string, value interface{}) (val Value) {
+	e.storerefresh()
+
 	// serialize value
 	switch reflect.ValueOf(value).Kind() {
 	case reflect.Struct, reflect.Array, reflect.Map:
