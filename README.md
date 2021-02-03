@@ -34,28 +34,33 @@ func main() {
 	})
 
 	// setting configurations
-	cpx.Set("flags.transaction_logging_enabled", true) // no error handling
-	cpx.Set("flags.transaction_logging_prefix", "trx_log")
-	cpx.Set("flags.transaction_logging_defaults", DataField{Version: "1.0", ClusterID: "88888"})
-	if err := cpx.Set("settings.transaction_logging_minimum_amount", 100000).Err(); err != nil {
+	cpx.Set("flags.logging_enabled", true) // no error handling
+	cpx.Set("settings.logging_prefix", "trx_log")
+	cpx.Set("settings.logging_defaults", DataField{Version: "1.0", ClusterID: "88888"})
+
+	// handling for errors
+	err := cpx.Set("settings.logging_min_amount", 100000).Err()
+	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
 	// getting config and assert as multiple types (boolean, float, string, object)
-	datafield := DataField{}
-	_ = cpx.Get("flags.transaction_logging_defaults").Bind(&datafield)
 	flagEnableBanner, _ := cpx.Get("flags.enable_banner").Bool()
-	confMinAmt, _ := cpx.Get("settings.transaction_logging_minimum_amount").Int()
-	fmt.Println("values:", flagEnableBanner, confMinAmt, datafield)
+	confMinAmt, _ := cpx.Get("settings.logging_min_amount").Int()
+
+	// binding value to object
+	datafield := DataField{}
+	_ = cpx.Get("settings.logging_defaults").Bind(&datafield)
+
 
 	// register as global for centralized access on runtime
 	ctl.RegisterGlobal(cpx)
 	flagEnableBanner, _ = ctl.GetGlobal().Get("flags.enable_banner").Bool()
-	fmt.Println("global values:", flagEnableBanner)
+
+	fmt.Println("values:", flagEnableBanner, confMinAmt, datafield)
 }
 ```
-
 
 ### Setup HTTP based Control Panel
 Ctl also support attaching some endpoints to your HTTP server to enable value management via HTTP request:
@@ -70,14 +75,12 @@ import (
 )
 
 func main() {
-	// setup instance with file storage
 	store, _ := ctl.NewStoreFile(ctl.ConfigStoreFile{FilePath: "fixture/store.json"})
 	cpx, _ := ctl.New(ctl.Config{
 		Store:       store,
 		RefreshRate: 10 * time.Second,
 	})
 
-	// attach control panel http routes to manage configs
 	http.DefaultServeMux.Handle("/ctl/", ctl.MakeHandler(ctl.ConfigHandler{
 		PathPrefix: "/ctl/",
 		Ctl:        cpx,
@@ -94,6 +97,30 @@ Available endpoints:
 - GET http://localhost:3333/{prefix}/config
 - GET http://localhost:3333/{prefix}/config/flags.enable_debug
 - PUT http://localhost:3333/{prefix}/config/flags.enable_debug with payload `{ "value":"value to persist in string" }`
+
+### Register Global Instance
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/avrebarra/ctl"
+)
+
+func main() {
+	store, _ := ctl.NewStoreFile(ctl.ConfigStoreFile{FilePath: "fixture/store.json"})
+	cpx, _ := ctl.New(ctl.Config{
+		Store:       store,
+		RefreshRate: 10 * time.Second,
+	})
+
+	ctl.RegisterGlobal(cpx)
+
+	flagEnableBanner, _ = ctl.GetGlobal().Get("flags.enable_banner").Bool()
+	fmt.Println("values:", flagEnableBanner)
+}
+```
 
 ## Milestones
 - [x] Value.Float()
