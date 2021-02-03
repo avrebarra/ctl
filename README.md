@@ -12,6 +12,8 @@
 </div>
 
 ## Usage
+*PS: Check example_test.go for more up to date examples*
+
 ### Basic Usage
 ```go
 package main
@@ -24,15 +26,7 @@ import (
 
 func main() {
 	// setup instance
-	xctl, err := ctl.New(ctl.Config{
-		InitialValues: map[string]string{
-			"flags.enable_banner": "true",
-			"setting.volume":      "5",
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
+	xctl, _ := ctl.New(ctl.Config{})
 
 	// read configuration
 	fmt.Println(xctl.Get("flags.enable_banner").Bool())
@@ -40,20 +34,64 @@ func main() {
 	fmt.Println(xctl.Get("setting.unknown").String())
 
 	// add configuration
-	err = xctl.Set("flags.enable_debug", true).Err()
-	if err != nil {
-		panic(err)
-	}
+	xctl.Set("flags.enable_debug", true)
 
 	// register as global (optional)
 	ctl.RegisterGlobal(xctl)
 	fmt.Println(ctl.GetGlobal().Get("flags.enable_banner").Bool())
+}
+```
+
+### Complex Value (Struct / Map)
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/avrebarra/ctl"
+)
+
+func main() {
+	type objstr struct {
+		Data1     string
+		Data2     bool
+		SubStruct struct {
+			Data1 string
+			Data2 bool
+		}
+	}
+
+	// setup instance
+	xctl, _ := ctl.New(ctl.Config{})
+
+	// add configuration
+	xctl.Set("my_settings.complex_object", objstr{
+		Data1: "something",
+		Data2: true,
+		SubStruct: struct {
+			Data1 string
+			Data2 bool
+		}{
+			Data1: "awyeah",
+		},
+	})
+
+	// read configuration
+	got := objstr{}
+	err := xctl.Get("my_settings.complex_object").Bind(&got)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(got.Data1)
+	fmt.Println(got.Data2)
+	fmt.Println(got.SubStruct.Data1)
 
 	// Output:
-	// true <nil>
-	// 5 <nil>
-	//  value not found
-	// false value not found
+	// something
+	// true
+	// awyeah
 }
 ```
 
