@@ -18,9 +18,9 @@ func MakeHandler(cfg ConfigHandler) http.Handler {
 	svr := makerouter(cfg)
 
 	r := mux.NewRouter()
-	r.HandleFunc(svr.config.PathPrefix+"configs", svr.HandleList).Methods("GET")
-	r.HandleFunc(svr.config.PathPrefix+"configs/{key}", svr.HandleGetConfig).Methods("GET")
-	r.HandleFunc(svr.config.PathPrefix+"configs/{key}", svr.HandleSetConfig).Methods("PATCH")
+	r.HandleFunc(svr.config.PathPrefix+"config", svr.HandleList).Methods("GET")
+	r.HandleFunc(svr.config.PathPrefix+"config/{key}", svr.HandleGetConfig).Methods("GET")
+	r.HandleFunc(svr.config.PathPrefix+"config/{key}", svr.HandleSetConfig).Methods("PATCH")
 
 	return r
 }
