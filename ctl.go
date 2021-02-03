@@ -41,6 +41,10 @@ func New(cfg Config) (*Ctl, error) {
 	return ent, nil
 }
 
+func (e *Ctl) List() (lis map[string]string) {
+	return e.valmap
+}
+
 func (e *Ctl) Get(key string) (val Value) {
 	strval, ok := e.valmap[key]
 	if !ok {

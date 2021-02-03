@@ -106,7 +106,7 @@ import (
 )
 
 func main() {
-    // setup store
+	// setup store
 	fstore, _ := ctl.NewStoreFile(ctl.ConfigStoreFile{
 		FilePath: "fixture/store.json",
 	})
@@ -125,6 +125,35 @@ func main() {
 }
 ```
 
+### CTL Endpoint
+```go
+package main
+
+import (
+	"net/http"
+
+	"github.com/avrebarra/ctl"
+)
+
+func main() {
+	store, _ := ctl.NewStoreFile(ctl.ConfigStoreFile{FilePath: "./fixture/store.json"})
+	xctl, _ := ctl.New(ctl.Config{Store: store})
+
+	http.Handle("/ctl", ctl.MakeHandler(ConfigHandler{
+		PathPrefix: "/ctl",
+		Ctl:        xctl,
+	}))
+
+	http.ListenAndServe(":3333", http.DefaultServeMux)
+}
+```
+
+Available endpoints:
+- `GET {prefix}/configs/`
+- `GET {prefix}/configs/flags.enable_debug`
+- `PUT {prefix}/configs/flags.enable_debug { value:"value" }`
+
+
 ## Milestones
 - [x] Value.Float()
 - [x] Ctl.Reset()
@@ -132,14 +161,7 @@ func main() {
 - [ ] Ctl.StopSubscribe()
 - [x] Persistence
 - [ ] Value Encryption
-- [ ] REST API Handler helper for management
-
-```
-GET /
-GET /items/
-GET /items/flags.enable_debug
-PUT /items/flags.enable_debug
-```
+- [x] REST API Handler helper for management
 
 [godoc-image]: https://godoc.org/github.com/avrebarra/minimok?status.svg
 [godoc-url]: https://godoc.org/github.com/avrebarra/minimok
