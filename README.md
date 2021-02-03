@@ -12,6 +12,25 @@
 </div>
 
 ## Usage
+### Quick Glance
+Add these:
+```go
+http.DefaultServeMux.Handle("/ctl/", ctl.MakeHandler(ctl.ConfigHandler{ PathPrefix: "/ctl/", Ctl: ctl.GetGlobal() }))
+fmt.Println("listening http://localhost:3333...")
+```
+To do these:
+```sh
+$ curl --location --request GET 'localhost:3333/ctl/config'
+{"flags.logging_enabled":"true","settings.logging_defaults":"{\"Version\":\"1.0\",\"ClusterID\":\"88888\"}","settings.logging_min_amount":"100000","settings.logging_prefix":"trx_log"}
+
+$ curl --location --request PATCH 'localhost:3333/ctl/config/flags.transaction_logging_enabled' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "value": "false"
+}'
+{"key":"flags.transaction_logging_enabled","value":"false"}
+
+```
 
 ### Setup and managing values
 *Note: It's recommended to specify a centralized storage. By doing so, multiple instances of same service could make use of shared/synchronized dynamic configs. You can also define your own store for db/redis/consul etc by implementing `Store` interface*
