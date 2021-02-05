@@ -50,7 +50,7 @@ $ curl --location --request PATCH 'localhost:3333/ctl/config/flags.transaction_l
 Available endpoints:
 - GET http://localhost:3333/{prefix}/config
 - GET http://localhost:3333/{prefix}/config/flags.enable_debug
-- PUT http://localhost:3333/{prefix}/config/flags.enable_debug with payload `{ "value":"value to persist AS A STRING" }`
+- PATCH http://localhost:3333/{prefix}/config/flags.enable_debug with payload `{ "value":"value to persist AS A STRING" }`
 
 ### Using the values
 ```go
