@@ -47,6 +47,43 @@ $ curl --location --request PATCH 'localhost:3333/ctl/config/flags.transaction_l
 
 ```
 
+Available endpoints:
+- GET http://localhost:3333/{prefix}/config
+- GET http://localhost:3333/{prefix}/config/flags.enable_debug
+- PUT http://localhost:3333/{prefix}/config/flags.enable_debug with payload `{ "value":"value to persist AS A STRING" }`
+
+### Using the values
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/avrebarra/ctl"
+)
+
+func main() {
+	cpx := ctl.GetGlobal()
+
+	cpx.Set("flags.hello_enabled", true) // no error handling
+
+	http.DefaultServeMux.Handle("/ctl/", ctl.MakeHandler(ctl.ConfigHandler{PathPrefix: "/ctl/", Ctl: ctl.GetGlobal()}))
+	http.DefaultServeMux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		flaghello, _ := cpx.Get("flags.hello_enabled").Bool()
+		if flaghello {
+			fmt.Fprintf(w, "hello\n")
+			return
+		}
+
+		fmt.Fprintf(w, "sorry, no hello\n")
+	})
+
+	fmt.Println("listening http://localhost:3333...")
+	http.ListenAndServe(":3333", http.DefaultServeMux)
+}
+```
+
 ### Managing values via code
 *Note: It's recommended to specify a centralized storage. By doing so, multiple instances of same service could make use of shared/synchronized dynamic configs. You can also define your own store for db/redis/consul etc by implementing `Store` interface*
 
@@ -89,36 +126,6 @@ func main() {
 }
 ```
 
-### Setup HTTP based Control Panel
-Ctl also support attaching some endpoints to your HTTP server to enable value management via HTTP request:
-
-```go
-package main
-
-import (
-	"fmt"
-
-	"github.com/avrebarra/ctl"
-)
-
-func main() {
-	http.DefaultServeMux.Handle("/ctl/", ctl.MakeHandler(ctl.ConfigHandler{
-		PathPrefix: "/ctl/",
-		Ctl:        ctl.GetGlobal(),
-	}))
-
-	fmt.Println("listening http://localhost:3333...")
-	fmt.Println("     to see ctl config listing, visit http://localhost:3333/ctl/config")
-	fmt.Println("     get and update individual config using GET/POST http://localhost:3333/ctl/config/{keys}")
-	http.ListenAndServe(":3333", http.DefaultServeMux)
-}
-```
-
-Available endpoints:
-- GET http://localhost:3333/{prefix}/config
-- GET http://localhost:3333/{prefix}/config/flags.enable_debug
-- PUT http://localhost:3333/{prefix}/config/flags.enable_debug with payload `{ "value":"value to persist in string" }`
-
 ### Referencing and Refreshing Values
 ```go
 package main
@@ -143,8 +150,8 @@ func main() {
 
 ```
 
-### Replacing Global Singleton
-By default global instance will be generated with memstore, but you can override it using custom store and options.
+### Replacing the Global Singleton
+By default the global instance will be generated with memstore, but you can override it using custom store and options.
 
 ```go
 package main
