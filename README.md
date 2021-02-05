@@ -19,26 +19,42 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/avrebarra/ctl"
 )
 
 func main() {
-	http.DefaultServeMux.Handle("/ctl/", ctl.MakeHandler(ctl.ConfigHandler{ 
-		PathPrefix: "/ctl/", 
-		Ctl: ctl.GetGlobal(),
-	}))
+	cpx := ctl.GetGlobal()
 	
+	// setting config values
+	cpx.Set("flags.hello_enabled", true) // no error handling
+
+	// setup handlers
+	http.DefaultServeMux.Handle("/ctl/", ctl.MakeHandler(ctl.ConfigHandler{PathPrefix: "/ctl/", Ctl: ctl.GetGlobal()}))
+	http.DefaultServeMux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		// get config value
+		flaghello, _ := cpx.Get("flags.hello_enabled").Bool()
+		
+		// use it
+		if flaghello {
+			fmt.Fprintf(w, "hello\n")
+			return
+		}
+		fmt.Fprintf(w, "sorry, no hello\n")
+	})
+
 	fmt.Println("listening http://localhost:3333...")
-	http.ListenAndServe(":3333",http.DefaultServeMux)
+	http.ListenAndServe(":3333", http.DefaultServeMux)
 }
+```
 ```
 You will have a runtime configurables and HTTP control panel:
 ```sh
 $ curl --location --request GET 'localhost:3333/ctl/config'
-{"flags.logging_enabled":"true","settings.logging_defaults":"{\"Version\":\"1.0\",\"ClusterID\":\"88888\"}","settings.logging_min_amount":"100000","settings.logging_prefix":"trx_log"}
+{"flags.hello_enabled":"true","settings.logging_defaults":"{\"Version\":\"1.0\",\"ClusterID\":\"88888\"}","settings.logging_min_amount":"100000","settings.logging_prefix":"trx_log"}
 
-$ curl --location --request PATCH 'localhost:3333/ctl/config/flags.transaction_logging_enabled' \
+$ curl --location --request PATCH 'localhost:3333/ctl/config/flags.hello_enabled' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "value": "false"
@@ -49,40 +65,8 @@ $ curl --location --request PATCH 'localhost:3333/ctl/config/flags.transaction_l
 
 Available endpoints:
 - GET http://localhost:3333/{prefix}/config
-- GET http://localhost:3333/{prefix}/config/flags.enable_debug
-- PATCH http://localhost:3333/{prefix}/config/flags.enable_debug with payload `{ "value":"value to persist AS A STRING" }`
-
-### Using the values
-```go
-package main
-
-import (
-	"fmt"
-	"net/http"
-
-	"github.com/avrebarra/ctl"
-)
-
-func main() {
-	cpx := ctl.GetGlobal()
-
-	cpx.Set("flags.hello_enabled", true) // no error handling
-
-	http.DefaultServeMux.Handle("/ctl/", ctl.MakeHandler(ctl.ConfigHandler{PathPrefix: "/ctl/", Ctl: ctl.GetGlobal()}))
-	http.DefaultServeMux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		flaghello, _ := cpx.Get("flags.hello_enabled").Bool()
-		if flaghello {
-			fmt.Fprintf(w, "hello\n")
-			return
-		}
-
-		fmt.Fprintf(w, "sorry, no hello\n")
-	})
-
-	fmt.Println("listening http://localhost:3333...")
-	http.ListenAndServe(":3333", http.DefaultServeMux)
-}
-```
+- GET http://localhost:3333/{prefix}/config/flags.hello_enabled
+- PATCH http://localhost:3333/{prefix}/config/flags.hello_enabled with payload `{ "value":"value to persist AS A STRING" }`
 
 ### Managing values via code
 *Note: It's recommended to specify a centralized storage. By doing so, multiple instances of same service could make use of shared/synchronized dynamic configs. You can also define your own store for db/redis/consul etc by implementing `Store` interface*
