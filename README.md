@@ -12,7 +12,6 @@
 </div>
 
 ## Usage
-### Quick Glance
 By adding these:
 ```go
 package main
@@ -48,8 +47,9 @@ func main() {
 	http.ListenAndServe(":3333", http.DefaultServeMux)
 }
 ```
-```
-You will have a runtime configurables and HTTP control panel:
+
+You will have a dynamic configurables plus HTTP control panel:
+
 ```sh
 $ curl --location --request GET 'localhost:3333/ctl/config'
 {"flags.hello_enabled":"true","settings.logging_defaults":"{\"Version\":\"1.0\",\"ClusterID\":\"88888\"}","settings.logging_min_amount":"100000","settings.logging_prefix":"trx_log"}
@@ -68,6 +68,7 @@ Available endpoints:
 - GET http://localhost:3333/{prefix}/config/flags.hello_enabled
 - PATCH http://localhost:3333/{prefix}/config/flags.hello_enabled with payload `{ "value":"value to persist AS A STRING" }`
 
+## Other Examples
 ### Managing values via code
 *Note: It's recommended to specify a centralized storage. By doing so, multiple instances of same service could make use of shared/synchronized dynamic configs. You can also define your own store for db/redis/consul etc by implementing `Store` interface*
 
